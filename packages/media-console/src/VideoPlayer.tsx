@@ -1,10 +1,11 @@
 import React, {useCallback, useState, useEffect, useRef} from 'react';
 import {View} from 'react-native';
-import Video, {
+import {
   OnLoadData,
   OnProgressData,
   OnSeekData,
 } from 'react-native-video';
+import Video from "@lunarr/vlc-player";
 import {useControlTimeout, useJSAnimations, usePanResponders} from './hooks';
 import {
   Error,
@@ -73,7 +74,7 @@ const AnimatedVideoPlayer = (
     rewindTime = 15,
     pan: {horizontal: horizontalPan, inverted: invertedPan} = {},
   } = props;
-
+  
   const mounted = useRef(false);
   const _videoRef = useRef<Video>(null);
   const controlTimeout = useRef<ReturnType<typeof setTimeout>>(
@@ -119,11 +120,17 @@ const AnimatedVideoPlayer = (
     containerStyle: containerStyle,
   };
 
-  const _onSeek = (obj: OnSeekData) => {
+  const _onSeek = (obj) => {
+    console.log("VideoPlayer onSeek: ", obj);
+
     if (!seeking) {
       setControlTimeout();
     }
+
+    setLoading(false);
+
     setCurrentTime(obj.seekTime);
+    setDuration(obj.duration);
 
     if (typeof onSeek === 'function') {
       onSeek(obj);
@@ -145,12 +152,16 @@ const AnimatedVideoPlayer = (
     }
   };
 
-  const _onError = () => {
+  const _onError = (error) => {
+    console.error("VideoPlayer Error: ", error);
+
     setError(true);
     setLoading(false);
   };
 
-  function _onLoadStart() {
+  function _onLoadStart(e) {
+    console.log("VideoPlayer onLoadStart: ", e);
+
     setLoading(true);
 
     if (typeof onLoadStart === 'function') {
@@ -158,7 +169,9 @@ const AnimatedVideoPlayer = (
     }
   }
 
-  function _onLoad(data: OnLoadData) {
+  function _onLoad(data) {
+    console.log("VideoPlayer onLoad: ", data);
+
     setDuration(data.duration);
     setLoading(false);
 
@@ -171,7 +184,9 @@ const AnimatedVideoPlayer = (
     }
   }
 
-  function _onProgress(data: OnProgressData) {
+  function _onProgress(data) {
+    console.log("VideoPlayer onProgress: ", data);
+
     if (!seeking) {
       setCurrentTime(data.currentTime);
 
@@ -179,6 +194,14 @@ const AnimatedVideoPlayer = (
         onProgress(data);
       }
     }
+  }
+
+  function _onMetadata(data) {
+    console.log("VideoPlayer onMetadata: ", data);
+  }
+
+  function _onSnapshot(data) {
+    console.log("VideoPlayer onSnapshot: ", data);
   }
 
   const _onScreenTouch = () => {
@@ -212,9 +235,11 @@ const AnimatedVideoPlayer = (
     onShowControls,
     onHideControls,
     onLoadStart: _onLoadStart,
-    onProgress: _onProgress,
     onSeek: _onSeek,
+    onProgress: _onProgress,
     onLoad: _onLoad,
+    onMetadata: _onMetadata,
+    onSnapshot: _onSnapshot,
     onPause,
     onPlay,
   };
@@ -367,7 +392,7 @@ const AnimatedVideoPlayer = (
     } else {
       setMuted(false);
     }
-
+        
     setVolume(newVolume);
     setVolumeOffset(volumePosition);
 
@@ -403,7 +428,7 @@ const AnimatedVideoPlayer = (
           {...events}
           ref={videoRef || _videoRef}
           resizeMode={_resizeMode}
-          volume={_volume}
+          volume={_volume*100}
           paused={_paused}
           muted={_muted}
           rate={rate}
