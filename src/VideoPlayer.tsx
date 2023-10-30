@@ -1,11 +1,9 @@
 import React, {useCallback, useState, useEffect, useRef} from 'react';
 import {View} from 'react-native';
-import {
-  OnLoadData,
-  OnProgressData,
-  OnSeekData,
-} from 'react-native-video';
+
+// @ts-ignore
 import Video from "@lunarr/vlc-player";
+
 import {useControlTimeout, useJSAnimations, usePanResponders} from './hooks';
 import {
   Error,
