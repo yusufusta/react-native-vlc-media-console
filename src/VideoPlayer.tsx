@@ -202,6 +202,20 @@ const AnimatedVideoPlayer = (
     console.log("VideoPlayer onSnapshot: ", data);
   }
 
+  function _onVideoStateChange(data) {
+    console.log("VideoPlayer onVideoStateChange: ", data);
+  }
+
+  function _onBuffer(data) {
+    console.log("VideoPlayer onBuffer: ", data);
+    if (data.isBuffering) {
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
+  }
+
+
   const _onScreenTouch = () => {
     if (tapActionTimeout.current) {
       clearTimeout(tapActionTimeout.current);
@@ -240,6 +254,8 @@ const AnimatedVideoPlayer = (
     onSnapshot: _onSnapshot,
     onPause,
     onPlay,
+    onVideoStateChange: _onVideoStateChange,
+    onBuffer: _onBuffer,
   };
 
   const constrainToSeekerMinMax = useCallback(
