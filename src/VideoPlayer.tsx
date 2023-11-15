@@ -420,6 +420,8 @@ const AnimatedVideoPlayer = (
   }, [volumeFillWidth, volumePosition]);
 
   useEffect(() => {
+    console.log("styles",[_styles.player.video, styles.videoStyle]);
+
     const position = volumeWidth * _volume;
     setVolumePosition(position);
     setVolumeOffset(position);
@@ -437,6 +439,9 @@ const AnimatedVideoPlayer = (
       containerStyles={styles.containerStyle}
       onScreenTouch={events.onScreenTouch}>
       <View style={[_styles.player.container, styles.containerStyle]}>
+        <View style={{
+          "bottom": 0, "left": 0, "overflow": "hidden", "position": "absolute", "right": 0, "top": 0
+        }}>
         <Video
           {...props}
           {...events}
@@ -446,9 +451,13 @@ const AnimatedVideoPlayer = (
           paused={_paused}
           muted={_muted}
           rate={rate}
-          style={[_styles.player.video, styles.videoStyle]}
+          style={[{
+            width: "100%",
+            height: "100%"
+          }, styles.videoStyle]}
           source={source}
         />
+        </View>
         {loading ? (
           <Loader />
         ) : (
