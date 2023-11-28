@@ -202,19 +202,10 @@ const AnimatedVideoPlayer = (
     console.log("VideoPlayer onSnapshot: ", data);
   }
 
-  function _onVideoStateChange(data) {
-    console.log("VideoPlayer onVideoStateChange: ", data);
-  }
-
   function _onBuffer(data) {
     console.log("VideoPlayer onBuffer: ", data);
-    if (data.isBuffering) {
-      setLoading(true);
-    } else {
-      setLoading(false);
-    }
+    setLoading(data.isBuffering);
   }
-
 
   const _onScreenTouch = () => {
     if (tapActionTimeout.current) {
@@ -252,10 +243,9 @@ const AnimatedVideoPlayer = (
     onLoad: _onLoad,
     onMetadata: _onMetadata,
     onSnapshot: _onSnapshot,
+    onBuffer: _onBuffer,
     onPause,
     onPlay,
-    onVideoStateChange: _onVideoStateChange,
-    onBuffer: _onBuffer,
   };
 
   const constrainToSeekerMinMax = useCallback(
@@ -420,8 +410,6 @@ const AnimatedVideoPlayer = (
   }, [volumeFillWidth, volumePosition]);
 
   useEffect(() => {
-    console.log("styles",[_styles.player.video, styles.videoStyle]);
-
     const position = volumeWidth * _volume;
     setVolumePosition(position);
     setVolumeOffset(position);
@@ -439,9 +427,6 @@ const AnimatedVideoPlayer = (
       containerStyles={styles.containerStyle}
       onScreenTouch={events.onScreenTouch}>
       <View style={[_styles.player.container, styles.containerStyle]}>
-        <View style={{
-          "bottom": 0, "left": 0, "overflow": "hidden", "position": "absolute", "right": 0, "top": 0
-        }}>
         <Video
           {...props}
           {...events}
@@ -451,13 +436,9 @@ const AnimatedVideoPlayer = (
           paused={_paused}
           muted={_muted}
           rate={rate}
-          style={[{
-            width: "100%",
-            height: "100%"
-          }, styles.videoStyle]}
+          style={[_styles.player.video, styles.videoStyle]}
           source={source}
         />
-        </View>
         {loading ? (
           <Loader />
         ) : (
@@ -494,8 +475,8 @@ const AnimatedVideoPlayer = (
             <BottomControls
               animations={animations}
               panHandlers={seekPanResponder.panHandlers}
-              disableTimer={disableTimer}
-              disableSeekbar={disableSeekbar}
+              disableTimer={duration == 0 || disableTimer}
+              disableSeekbar={duration == 0 || disableSeekbar}
               showHours={showHours}
               showDuration={showDuration}
               paused={_paused}
