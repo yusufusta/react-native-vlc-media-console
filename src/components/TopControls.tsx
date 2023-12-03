@@ -1,16 +1,21 @@
-import React, {memo} from 'react';
+import React, { memo } from 'react';
 import {
   ImageBackground,
   SafeAreaView,
   StyleSheet,
   View,
   GestureResponderHandlers,
+  Text,
 } from 'react-native';
-import {Volume} from './Volume';
-import {Back} from './Back';
-import {NullControl} from './NullControl';
-import {styles} from './styles';
-import type {VideoAnimations} from '../types';
+import { Volume } from './Volume';
+import { Back } from './Back';
+import { NullControl } from './NullControl';
+import { styles } from './styles';
+import type { VideoAnimations } from '../types';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  IconButton
+} from 'react-native-paper';
 
 interface TopControlProps {
   showControls: boolean;
@@ -29,7 +34,7 @@ export const TopControls = memo(
   ({
     showControls,
     panHandlers,
-    animations: {AnimatedView, controlsOpacity, topControl},
+    animations: { AnimatedView, controlsOpacity, topControl },
     disableBack,
     disableVolume,
     volumeFillWidth,
@@ -37,6 +42,7 @@ export const TopControls = memo(
     volumeTrackWidth,
     onBack,
     resetControlTimeout,
+    setChannelList
   }: TopControlProps) => {
     const backControl = disableBack ? (
       <NullControl />
@@ -67,7 +73,12 @@ export const TopControls = memo(
           imageStyle={[styles.vignette]}>
           <SafeAreaView style={_styles.topControlGroup}>
             {backControl}
-            <View style={_styles.pullRight}>{volumeControl}</View>
+            <View style={_styles.pullRight}>
+              {volumeControl}
+              <IconButton onPress={() => setChannelList(
+                (prev: boolean) => !prev
+              )} icon="dots-vertical" size={30} iconColor="#fff" />
+            </View>
           </SafeAreaView>
         </ImageBackground>
       </AnimatedView>

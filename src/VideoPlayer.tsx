@@ -1,10 +1,10 @@
-import React, {useCallback, useState, useEffect, useRef} from 'react';
-import {View} from 'react-native';
-
+import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 // @ts-ignore
 import Video from "@lunarr/vlc-player";
 
-import {useControlTimeout, useJSAnimations, usePanResponders} from './hooks';
+import { useControlTimeout, useJSAnimations, usePanResponders } from './hooks';
 import {
   Error,
   Loader,
@@ -13,10 +13,13 @@ import {
   PlayPause,
   Overlay,
 } from './components';
-import {PlatformSupport} from './OSSupport';
-import {_onBack} from './utils';
-import {_styles} from './styles';
-import type {VideoPlayerProps, WithRequiredProperty} from './types';
+import { PlatformSupport } from './OSSupport';
+import { _onBack } from './utils';
+import { _styles } from './styles';
+import type { VideoPlayerProps, WithRequiredProperty } from './types';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import FastImage from 'react-native-fast-image';
+import { useNavigation } from '@react-navigation/native';
 
 const volumeWidth = 150;
 const iconOffset = 0;
@@ -45,10 +48,10 @@ const AnimatedVideoPlayer = (
     onError,
     onBack,
     onEnd,
-    onEnterFullscreen = () => {},
-    onExitFullscreen = () => {},
-    onHideControls = () => {},
-    onShowControls = () => {},
+    onEnterFullscreen = () => { },
+    onExitFullscreen = () => { },
+    onHideControls = () => { },
+    onShowControls = () => { },
     onPause,
     onPlay,
     onLoad,
@@ -70,13 +73,15 @@ const AnimatedVideoPlayer = (
     disableOverlay,
     navigator,
     rewindTime = 15,
-    pan: {horizontal: horizontalPan, inverted: invertedPan} = {},
+    pan: { horizontal: horizontalPan, inverted: invertedPan } = {},
+    otherChannelList = [],
+    streamUrlBuilder,
   } = props;
-  
+
   const mounted = useRef(false);
   const _videoRef = useRef<Video>(null);
   const controlTimeout = useRef<ReturnType<typeof setTimeout>>(
-    setTimeout(() => {}),
+    setTimeout(() => { }),
   ).current;
   const tapActionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [_resizeMode, setResizeMode] = useState(resizeMode);
@@ -102,6 +107,9 @@ const AnimatedVideoPlayer = (
   const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [channelList, setChannelList] = useState(false);
+
+  const navigation = useNavigation();
 
   const videoRef = props.videoRef || _videoRef;
 
@@ -290,7 +298,7 @@ const AnimatedVideoPlayer = (
     }
   };
 
-  const {clearControlTimeout, resetControlTimeout, setControlTimeout} =
+  const { clearControlTimeout, resetControlTimeout, setControlTimeout } =
     useControlTimeout({
       controlTimeout,
       controlTimeoutDelay,
@@ -300,7 +308,7 @@ const AnimatedVideoPlayer = (
       alwaysShowControls,
     });
 
-  const {volumePanResponder, seekPanResponder} = usePanResponders({
+  const { volumePanResponder, seekPanResponder } = usePanResponders({
     duration,
     seekerOffset,
     volumeOffset,
@@ -396,7 +404,7 @@ const AnimatedVideoPlayer = (
     } else {
       setMuted(false);
     }
-        
+
     setVolume(newVolume);
     setVolumeOffset(volumePosition);
 
@@ -408,6 +416,10 @@ const AnimatedVideoPlayer = (
       setVolumeTrackWidth(newVolumeTrackWidth);
     }
   }, [volumeFillWidth, volumePosition]);
+
+  useEffect(() => {
+    console.log("VideoPlayer useEffect source: ", _resizeMode, _isFullscreen);
+  }, [_resizeMode, _isFullscreen]);
 
   useEffect(() => {
     const position = volumeWidth * _volume;
@@ -432,7 +444,8 @@ const AnimatedVideoPlayer = (
           {...events}
           ref={videoRef || _videoRef}
           resizeMode={_resizeMode}
-          volume={_volume*100}
+          videoAspectRatio={_isFullscreen ? "20:9" : '16:9'}
+          volume={_volume * 100}
           paused={_paused}
           muted={_muted}
           rate={rate}
@@ -456,18 +469,19 @@ const AnimatedVideoPlayer = (
               onBack={events.onBack}
               resetControlTimeout={resetControlTimeout}
               showControls={showControls}
+              setChannelList={setChannelList}
             />
             <PlayPause
               animations={animations}
               disablePlayPause={disablePlayPause}
-              disableSeekButtons={disableSeekButtons}
+              disableSeekButtons={duration == 0 || disableSeekButtons}
               paused={_paused}
               togglePlayPause={togglePlayPause}
               resetControlTimeout={resetControlTimeout}
               showControls={showControls}
-              onPressRewind={() =>
+              onPressRewind={() => {
                 videoRef?.current?.seek(currentTime - rewindTime)
-              }
+              }}
               onPressForward={() =>
                 videoRef?.current?.seek(currentTime + rewindTime)
               }
@@ -476,7 +490,7 @@ const AnimatedVideoPlayer = (
               animations={animations}
               panHandlers={seekPanResponder.panHandlers}
               disableTimer={duration == 0 || disableTimer}
-              disableSeekbar={duration == 0 || disableSeekbar}
+              disableSeekbar={duration == 0 || disableSeekbar}
               showHours={showHours}
               showDuration={showDuration}
               paused={_paused}
@@ -495,6 +509,49 @@ const AnimatedVideoPlayer = (
               toggleFullscreen={toggleFullscreen}
               showControls={showControls}
             />
+            {(showControls && channelList) && (
+              <animations.AnimatedView
+                style={[
+                  _styles.player.channelList,
+                  animations.controlsOpacity,
+                  animations.bottomControl,
+                ]}>
+                <View style={_styles.player.channelListContainer}>
+                  <Text style={_styles.player.channelListTitle}>
+                    Channel List
+                  </Text>
+
+                  <ScrollView style={_styles.player.channelListRow}>
+                    {otherChannelList.map((channel, index) => (
+                      <TouchableOpacity key={index} onPress={() => {
+                        navigation.navigate('Video', {
+                          item: {
+                            name: channel.name,
+                            url: streamUrlBuilder(channel),
+                          },
+                          otherChannelList: otherChannelList,
+                        });
+                      }}>
+                        <View style={_styles.player.channel}>
+                          <View style={_styles.player.channelIcon}>
+                            <FastImage
+                              style={_styles.player.channelIconImage}
+                              source={{
+                                uri: channel.stream_icon,
+                                priority: FastImage.priority.normal,
+                              }}
+                              resizeMode={FastImage.resizeMode.contain}
+                            />
+                          </View>
+                          <View style={_styles.player.channelInfo}>
+                            <Text style={_styles.player.channelName}>{channel.name}</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>))}
+                  </ScrollView>
+                </View>
+              </animations.AnimatedView>
+            )}
           </>
         )}
       </View>
