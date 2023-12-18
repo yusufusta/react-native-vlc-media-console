@@ -5,17 +5,13 @@ import {
   StyleSheet,
   View,
   GestureResponderHandlers,
-  Text,
 } from 'react-native';
 import { Volume } from './Volume';
 import { Back } from './Back';
 import { NullControl } from './NullControl';
 import { styles } from './styles';
 import type { VideoAnimations } from '../types';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import {
-  IconButton
-} from 'react-native-paper';
+import { IconButton } from 'react-native-paper';
 
 interface TopControlProps {
   showControls: boolean;
@@ -42,7 +38,8 @@ export const TopControls = memo(
     volumeTrackWidth,
     onBack,
     resetControlTimeout,
-    setChannelList
+    setChannelList,
+    setAudioList,
   }: TopControlProps) => {
     const backControl = disableBack ? (
       <NullControl />
@@ -75,9 +72,20 @@ export const TopControls = memo(
             {backControl}
             <View style={_styles.pullRight}>
               {volumeControl}
-              <IconButton onPress={() => setChannelList(
-                (prev: boolean) => !prev
-              )} icon="dots-vertical" size={30} iconColor="#fff" />
+              <IconButton
+                icon="television"
+                iconColor="#fff"
+                size={32}
+                onPress={() => setChannelList(prev => !prev)}
+              />
+
+              <IconButton
+                icon="music"
+                iconColor="#fff"
+                size={32}
+                onPress={() => setAudioList(prev => !prev)}
+              />
+
             </View>
           </SafeAreaView>
         </ImageBackground>

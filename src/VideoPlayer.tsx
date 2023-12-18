@@ -108,6 +108,10 @@ const AnimatedVideoPlayer = (
   const [error, setError] = useState(false);
   const [duration, setDuration] = useState(0);
   const [channelList, setChannelList] = useState(false);
+  const [audioTrackList, setAudioTrack] = useState(false);
+  const [audios, setAudios] = useState([]);
+  const [selectedAudio, setSelectedAudio] = useState(0);
+  const [height, setHeight] = useState(0);
 
   const navigation = useNavigation();
 
@@ -210,8 +214,29 @@ const AnimatedVideoPlayer = (
     console.log("VideoPlayer onSnapshot: ", data);
   }
 
+  function _onVideoStateChange(data) {
+    console.log("VideoPlayer onVideoStateChange: ", data);
+  }
+
   function _onBuffer(data) {
-    console.log("VideoPlayer onBuffer: ", data);
+    const videoInfo = data.videoInfo;
+    if (videoInfo && "audioTracks" in videoInfo) {
+      setAudios(videoInfo.audioTracks);
+    }
+    if (videoInfo && !("videoSize" in videoInfo)) {
+      setLoading(true);
+      return;
+    }
+
+    if (videoInfo && videoInfo.duration) {
+      setDuration(videoInfo.duration / 1000);
+      //setHeight(videoInfo.height);  
+    }
+
+    console.log("audios: ", audios);
+
+    console.log("VideoPlayer onBuffer: ", data, JSON.stringify(data.videoInfo));
+
     setLoading(data.isBuffering);
   }
 
@@ -237,7 +262,7 @@ const AnimatedVideoPlayer = (
   };
 
   const events = {
-    onError: onError || _onError,
+    onError: _onError,
     onBack: (onBack || _onBack(navigator)) as () => void,
     onEnd: _onEnd,
     onScreenTouch: _onScreenTouch,
@@ -254,6 +279,7 @@ const AnimatedVideoPlayer = (
     onBuffer: _onBuffer,
     onPause,
     onPlay,
+    onVideoStateChange: _onVideoStateChange
   };
 
   const constrainToSeekerMinMax = useCallback(
@@ -453,7 +479,25 @@ const AnimatedVideoPlayer = (
           source={source}
         />
         {loading ? (
-          <Loader />
+          <>
+            <Loader />
+            <TopControls
+              panHandlers={volumePanResponder.panHandlers}
+              animations={animations}
+              disableBack={disableBack}
+              disableVolume={disableVolume}
+              volumeFillWidth={volumeFillWidth}
+              volumeTrackWidth={volumeTrackWidth}
+              volumePosition={volumePosition}
+              onBack={events.onBack}
+              resetControlTimeout={resetControlTimeout}
+              showControls={showControls}
+              setChannelList={setChannelList}
+              setAudioList={setAudioTrack}
+              audios={audios}
+              height={height}
+            />
+          </>
         ) : (
           <>
             <Error error={error} />
@@ -470,10 +514,13 @@ const AnimatedVideoPlayer = (
               resetControlTimeout={resetControlTimeout}
               showControls={showControls}
               setChannelList={setChannelList}
+              setAudioList={setAudioTrack}
+              audios={audios}
+              height={height}
             />
             <PlayPause
               animations={animations}
-              disablePlayPause={disablePlayPause}
+              disablePlayPause={duration == 0 || disablePlayPause}
               disableSeekButtons={duration == 0 || disableSeekButtons}
               paused={_paused}
               togglePlayPause={togglePlayPause}
@@ -509,7 +556,33 @@ const AnimatedVideoPlayer = (
               toggleFullscreen={toggleFullscreen}
               showControls={showControls}
             />
-            {(showControls && channelList) && (
+            {(showControls && !channelList && audioTrackList) && (
+              <animations.AnimatedView
+                style={[
+                  _styles.player.channelList,
+                  animations.controlsOpacity,
+                  animations.bottomControl,
+                ]}>
+                <View style={_styles.player.channelListContainer}>
+                  <Text style={_styles.player.channelListTitle}>
+                    Audio
+                  </Text>
+
+                  <ScrollView style={_styles.player.channelListRow}>
+                    {audios.map((channel, index) => (
+                      <TouchableOpacity key={index} onPress={() => {
+                      }}>
+                        <View style={_styles.player.channel}>
+                          <View style={[_styles.player.channelInfo, { flex: 1 }]}>
+                            <Text style={_styles.player.channelName}>{channel.name}</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>))}
+                  </ScrollView>
+                </View>
+              </animations.AnimatedView>
+            )}
+            {(showControls && channelList && !audioTrackList) && (
               <animations.AnimatedView
                 style={[
                   _styles.player.channelList,
@@ -555,7 +628,7 @@ const AnimatedVideoPlayer = (
           </>
         )}
       </View>
-    </PlatformSupport>
+    </PlatformSupport >
   );
 };
 
