@@ -2,7 +2,11 @@ import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 // @ts-ignore
-import Video from "@lunarr/vlc-player";
+import VideoPlayerVLC from "@lunarr/vlc-player";
+
+import VideoPlayerRN from 'react-native-video';
+// @ts-ignore
+import { VolumeManager } from 'react-native-volume-manager';
 
 import { useControlTimeout, useJSAnimations, usePanResponders } from './hooks';
 import {
@@ -76,6 +80,7 @@ const AnimatedVideoPlayer = (
     pan: { horizontal: horizontalPan, inverted: invertedPan } = {},
     otherChannelList = [],
     streamUrlBuilder,
+    useVLC = false,
   } = props;
 
   const mounted = useRef(false);
@@ -165,7 +170,7 @@ const AnimatedVideoPlayer = (
   const _onError = (error) => {
     console.error("VideoPlayer Error: ", error);
 
-    setError(true);
+    //setError(true);
     setLoading(false);
   };
 
@@ -198,7 +203,10 @@ const AnimatedVideoPlayer = (
     console.log("VideoPlayer onProgress: ", data);
 
     if (!seeking) {
-      setCurrentTime(data.currentTime);
+      setLoading(false);
+      if (data.currentTime < data.duration && data.duration > 0) {
+        setCurrentTime(data.currentTime);
+      }
 
       if (typeof onProgress === 'function') {
         onProgress(data);
@@ -216,6 +224,10 @@ const AnimatedVideoPlayer = (
 
   function _onVideoStateChange(data) {
     console.log("VideoPlayer onVideoStateChange: ", data);
+
+    if (data.type == "mediaMetaDataDidChange") {
+      setLoading(false);
+    } else { }
   }
 
   function _onBuffer(data) {
@@ -406,7 +418,7 @@ const AnimatedVideoPlayer = (
   }, [currentTime, duration, seekerWidth, setSeekerPosition]);
 
   useEffect(() => {
-    if (showControls && !loading) {
+    if (showControls) {
       animations.showControlAnimation();
       setControlTimeout();
       typeof events.onShowControls === 'function' && events.onShowControls();
@@ -419,8 +431,24 @@ const AnimatedVideoPlayer = (
   }, [showControls, loading]);
 
   useEffect(() => {
-    setMuted(muted);
-  }, [muted]);
+    // (async () => {
+    //   const volume = await VolumeManager.getVolume();
+    //   const position = volumeWidth * volume.volume;
+    //   setVolumePosition(position);
+    //   setVolumeOffset(position);
+
+    //   console.log("VolumeManager.addVolumeListener: ", volume);
+    // })();
+
+    // VolumeManager.addVolumeListener((result) => {
+    //   console.log("VolumeManager.addVolumeListener: ", result);
+
+    //   const position = volumeWidth * result.volume;
+    //   setVolumePosition(position);
+    //   setVolumeOffset(position);
+    // });
+
+  }, []);
 
   useEffect(() => {
     const newVolume = volumePosition / volumeWidth;
@@ -444,7 +472,10 @@ const AnimatedVideoPlayer = (
   }, [volumeFillWidth, volumePosition]);
 
   useEffect(() => {
-    console.log("VideoPlayer useEffect source: ", _resizeMode, _isFullscreen);
+    /*videoRef?.current?.isPlaying((isPlaying) => {
+      console.log("VideoPlayer isPlaying: ", isPlaying);
+    });*/
+
   }, [_resizeMode, _isFullscreen]);
 
   useEffect(() => {
@@ -452,6 +483,8 @@ const AnimatedVideoPlayer = (
     setVolumePosition(position);
     setVolumeOffset(position);
     mounted.current = true;
+
+    console.log("VideoPlayer useEffect: ", props);
     return () => {
       mounted.current = false;
       clearControlTimeout();
@@ -465,27 +498,45 @@ const AnimatedVideoPlayer = (
       containerStyles={styles.containerStyle}
       onScreenTouch={events.onScreenTouch}>
       <View style={[_styles.player.container, styles.containerStyle]}>
-        <Video
-          {...props}
-          {...events}
-          ref={videoRef || _videoRef}
-          resizeMode={_resizeMode}
-          videoAspectRatio={_isFullscreen ? "20:9" : '16:9'}
-          volume={_volume * 100}
-          paused={_paused}
-          muted={_muted}
-          rate={rate}
-          style={[_styles.player.video, styles.videoStyle]}
-          source={source}
-        />
+
+        {useVLC && (
+          <VideoPlayerVLC
+            {...props}
+            {...events}
+            ref={videoRef || _videoRef}
+            resizeMode={_resizeMode}
+            videoAspectRatio={_isFullscreen ? "20:9" : '16:9'}
+            volume={_volume * 100}
+            paused={_paused}
+            muted={_muted}
+            rate={rate}
+            style={[_styles.player.video, styles.videoStyle]}
+            source={source}
+          />)}
+
+        {!useVLC && (
+          <VideoPlayerRN
+            {...props}
+            {...events}
+            ref={videoRef || _videoRef}
+            resizeMode={_resizeMode}
+            videoAspectRatio={_isFullscreen ? "20:9" : '16:9'}
+            volume={_volume * 100}
+            paused={_paused}
+            muted={_muted}
+            rate={rate}
+            style={[_styles.player.video, styles.videoStyle]}
+            source={source}
+          />
+        )}
+
         {loading ? (
           <>
-            <Loader />
             <TopControls
               panHandlers={volumePanResponder.panHandlers}
               animations={animations}
               disableBack={disableBack}
-              disableVolume={disableVolume}
+              disableVolume={true}
               volumeFillWidth={volumeFillWidth}
               volumeTrackWidth={volumeTrackWidth}
               volumePosition={volumePosition}
@@ -497,6 +548,7 @@ const AnimatedVideoPlayer = (
               audios={audios}
               height={height}
             />
+            <Loader />
           </>
         ) : (
           <>
@@ -520,8 +572,8 @@ const AnimatedVideoPlayer = (
             />
             <PlayPause
               animations={animations}
-              disablePlayPause={duration == 0 || disablePlayPause}
-              disableSeekButtons={duration == 0 || disableSeekButtons}
+              disablePlayPause={duration == 0 || currentTime == 0 || disablePlayPause}
+              disableSeekButtons={duration == 0 || currentTime == 0 || disableSeekButtons}
               paused={_paused}
               togglePlayPause={togglePlayPause}
               resetControlTimeout={resetControlTimeout}
@@ -536,8 +588,8 @@ const AnimatedVideoPlayer = (
             <BottomControls
               animations={animations}
               panHandlers={seekPanResponder.panHandlers}
-              disableTimer={duration == 0 || disableTimer}
-              disableSeekbar={duration == 0 || disableSeekbar}
+              disableTimer={duration == 0 || currentTime == 0 || disableTimer}
+              disableSeekbar={duration == 0 || currentTime == 0 || disableSeekbar}
               showHours={showHours}
               showDuration={showDuration}
               paused={_paused}
@@ -564,10 +616,6 @@ const AnimatedVideoPlayer = (
                   animations.bottomControl,
                 ]}>
                 <View style={_styles.player.channelListContainer}>
-                  <Text style={_styles.player.channelListTitle}>
-                    Audio
-                  </Text>
-
                   <ScrollView style={_styles.player.channelListRow}>
                     {audios.map((channel, index) => (
                       <TouchableOpacity key={index} onPress={() => {
@@ -590,10 +638,6 @@ const AnimatedVideoPlayer = (
                   animations.bottomControl,
                 ]}>
                 <View style={_styles.player.channelListContainer}>
-                  <Text style={_styles.player.channelListTitle}>
-                    Channel List
-                  </Text>
-
                   <ScrollView style={_styles.player.channelListRow}>
                     {otherChannelList.map((channel, index) => (
                       <TouchableOpacity key={index} onPress={() => {
