@@ -21,7 +21,6 @@
   "scripts": {
     "lint": "eslint ./src",
     "test": "echo \"No test specified\" && exit 1",
-    "prepare": "bob build",
     "release": "release-it"
   },
   "dependencies": {},
