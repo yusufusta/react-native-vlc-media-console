@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "checkJs": false
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "esModuleInterop": true,
